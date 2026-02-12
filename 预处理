@@ -1,0 +1,52 @@
+import json
+
+input_file = "openai_export.json" ###要改成自己的json文件路径和名称！
+output_file = "processed_dialogues.json"   ###要加一下路径！放桌面也行！或者自建一个文件夹放！
+
+def load_conversation(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def extract_from_mapping(mapping):
+    dialogues = []
+    for node in mapping.values():
+        msg = node.get("message")
+        if not msg:
+            continue
+        role = msg.get("author", {}).get("role")
+        parts = msg.get("content", {}).get("parts", [])
+        if not parts or not isinstance(parts, list):
+            continue
+
+        # 🔧 这里进行类型判断：如果是字典就提取其text字段
+        content = ""
+        if isinstance(parts[0], str):
+            content = parts[0].strip()
+        elif isinstance(parts[0], dict):
+            content = parts[0].get("text", "").strip()
+
+        if role in ["user", "assistant"] and content:
+            dialogues.append({
+                "speaker": "你" if role == "user" else "家机",  ###家机名字要自己改一下！
+                "text": content
+            })
+    return dialogues
+
+def extract_dialogues(data):
+    all_dialogues = []
+    for conv in data:
+        mapping = conv.get("mapping")
+        if mapping:
+            dialogue = extract_from_mapping(mapping)
+            all_dialogues.extend(dialogue)
+    return all_dialogues
+
+def save_to_json(dialogues, path):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(dialogues, f, ensure_ascii=False, indent=2)
+    print(f"✅ 已保存：{path}，共 {len(dialogues)} 条对话")
+
+if __name__ == "__main__":
+    raw_data = load_conversation(input_file)
+    dialogues = extract_dialogues(raw_data)
+    save_to_json(dialogues, output_file)
