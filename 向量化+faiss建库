@@ -1,0 +1,46 @@
+pip install -U openai faiss-cpu pandas tqdm
+from openai import OpenAI
+import json
+import faiss
+import numpy as np
+from tqdm import tqdm
+
+# ✅ 替换为你的 AihubMix API Key
+client = OpenAI(
+    api_key="sk-**************",   ###这里把引号内换成自己的api,官网api也可以用，但要换个写法
+    base_url="https://aihubmix.com/v1"
+)
+
+# 加载你的对话文本
+with open("processed_dialogues.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+vectors = []
+metadata = []
+
+print("📌 正在生成嵌入向量...")
+for i, item in enumerate(tqdm(data)):
+    text = item["text"]
+    try:
+        response = client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        embedding = response.data[0].embedding
+        vectors.append(embedding)
+        metadata.append(item)
+    except Exception as e:
+        print(f"❌ 第 {i} 条出错：{e}")
+        continue
+
+# 构建 FAISS 索引
+dim = len(vectors[0])
+index = faiss.IndexFlatL2(dim)
+index.add(np.array(vectors).astype("float32"))
+faiss.write_index(index, "chat_memory.index")
+
+# 保存 metadata
+with open("chat_memory_metadata.json", "w", encoding="utf-8") as f:
+    json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+print("✅ 嵌入完成并保存 FAISS 向量库。")
