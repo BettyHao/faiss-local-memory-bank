@@ -12,7 +12,7 @@ client = OpenAI(
 )
 
 # 加载你的对话文本
-with open("processed_dialogues.json", "r", encoding="utf-8") as f:
+with open("processed_dialogues.json", "r", encoding="utf-8") as f:   ###这里文件名和地址要与预处理时的输出文件保持一致
     data = json.load(f)
 
 vectors = []
